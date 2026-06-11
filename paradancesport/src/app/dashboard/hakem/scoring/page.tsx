@@ -1,0 +1,452 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
+import { mapCompetition } from '@/lib/firebase/competitions'
+import { mapEvent } from '@/lib/firebase/events'
+import { mapJudge } from '@/lib/firebase/judges'
+import { mapJudgeAssignment } from '@/lib/firebase/judgeAssignments'
+import { mapEntry } from '@/lib/firebase/entries'
+import { mapScore, upsertScore } from '@/lib/firebase/scores'
+import { validateScore, scaleFor } from '@/lib/scoring/validators'
+import { useAuthStore } from '@/store/auth.store'
+import type {
+  Competition,
+  Event,
+  Judge,
+  JudgeAssignment,
+  Entry,
+  Score,
+  ScoringComponent,
+} from '@/types'
+import { ShieldAlert, ClipboardList, CheckCircle2, X, Trophy, Hourglass } from 'lucide-react'
+
+export default function HakemScoringPage() {
+  const { user } = useAuthStore()
+
+  const [judges, setJudges] = useState<Judge[]>([])
+  const [competitions, setCompetitions] = useState<Competition[]>([])
+  const [myAssignments, setMyAssignments] = useState<JudgeAssignment[]>([])
+  const [allEvents, setAllEvents] = useState<Event[]>([])
+  const [entries, setEntries] = useState<Entry[]>([])
+  const [scores, setScores] = useState<Score[]>([])
+
+  // Giriş yapan kullanıcının hakem kaydı (judgeId)
+  const myJudgeId = useMemo(() => {
+    if (!user) return ''
+    if (user.judgeId) return user.judgeId
+    return judges.find((j) => j.userId === user.uid)?.id ?? ''
+  }, [user, judges])
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'judges'), (s) =>
+      setJudges(s.docs.map((d) => mapJudge(d.id, d.data())))
+    )
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'competitions'), (s) =>
+      setCompetitions(s.docs.map((d) => mapCompetition(d.id, d.data())))
+    )
+    return () => unsub()
+  }, [])
+
+  // Tüm kategoriler (atandıklarım + aktif sporcu takibi için)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'events'), (s) =>
+      setAllEvents(s.docs.map((d) => mapEvent(d.id, d.data())))
+    )
+    return () => unsub()
+  }, [])
+
+  // Yalnızca bu hakeme ait atamalar
+  useEffect(() => {
+    if (!myJudgeId) {
+      setMyAssignments([])
+      return
+    }
+    const unsub = onSnapshot(
+      query(collection(db, 'judgeAssignments'), where('judgeId', '==', myJudgeId)),
+      (s) => setMyAssignments(s.docs.map((d) => mapJudgeAssignment(d.id, d.data())))
+    )
+    return () => unsub()
+  }, [myJudgeId])
+
+  const eventById = useMemo(() => new Map(allEvents.map((e) => [e.id, e])), [allEvents])
+  const compById = useMemo(() => new Map(competitions.map((c) => [c.id, c])), [competitions])
+
+  // Sahada (aktif) sporcusu olan, bana atanmış kategoriyi bul
+  const activeAssignment = useMemo(() => {
+    return myAssignments.find((a) => {
+      const ev = eventById.get(a.eventId)
+      return ev && ev.activeEntryId && ev.status !== 'APPROVED'
+    })
+  }, [myAssignments, eventById])
+
+  const activeEvent = activeAssignment ? eventById.get(activeAssignment.eventId) : undefined
+  const activeComp = activeEvent ? compById.get(activeEvent.competitionId) : undefined
+
+  // Aktif kategorinin kayıt + skorları
+  useEffect(() => {
+    if (!activeEvent?.id) {
+      setEntries([])
+      setScores([])
+      return
+    }
+    const u1 = onSnapshot(
+      query(collection(db, 'entries'), where('eventId', '==', activeEvent.id)),
+      (s) => setEntries(s.docs.map((d) => mapEntry(d.id, d.data())))
+    )
+    const u2 = onSnapshot(
+      query(collection(db, 'scores'), where('eventId', '==', activeEvent.id)),
+      (s) => setScores(s.docs.map((d) => mapScore(d.id, d.data())))
+    )
+    return () => {
+      u1()
+      u2()
+    }
+  }, [activeEvent?.id])
+
+  const activeEntry = entries.find((e) => e.id === activeEvent?.activeEntryId)
+
+  const dances: (string | undefined)[] =
+    activeEvent && activeEvent.dances.length > 0 ? activeEvent.dances : [undefined]
+
+  // entryId|dance|component -> value (yalnızca benim skorlarım)
+  const scoreMap = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const s of scores) {
+      if (s.judgeId !== myJudgeId) continue
+      m.set(`${s.entryId}|${s.dance ?? ''}|${s.component}`, s.value)
+    }
+    return m
+  }, [scores, myJudgeId])
+
+  if (user && user.role !== 'hakem' && user.role !== 'admin') {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
+          <p className="text-gray-600 mt-2">Bu sayfa hakemler içindir.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (user && user.role === 'hakem' && judges.length > 0 && !myJudgeId) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900">Hakem kaydı bağlı değil</h2>
+          <p className="text-gray-600 mt-2">
+            Kullanıcı hesabınız bir hakem kaydına bağlanmamış. Lütfen yöneticiyle iletişime geçin.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Puanlama (Hakem)</h1>
+        <p className="text-gray-600 mt-1">
+          Masa hakemi sahaya aldığı yarışmacıyı gönderir; siz yalnızca o sırt no&apos;yu puanlarsınız.
+        </p>
+      </div>
+
+      {!activeAssignment || !activeEvent || !activeEntry ? (
+        <div className="rounded-xl bg-blue-50 border border-blue-200 p-10 text-center">
+          <Hourglass className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-blue-900">Şu an puanlanacak sporcu yok</h2>
+          <p className="text-blue-700 mt-2 max-w-md mx-auto">
+            Masa hakemi sahadaki yarışmacıyı gönderdiğinde sırt no burada belirir ve
+            puanlayabilirsiniz. Lütfen bekleyin.
+          </p>
+          {myAssignments.length === 0 && myJudgeId && (
+            <p className="text-xs text-blue-500 mt-4">
+              (Henüz size atanmış bir kategori yok.)
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Bilgi başlığı — yarışma + kategori (yalnızca bilgi) */}
+          <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-5 flex flex-wrap items-center gap-3">
+            <Trophy className="w-6 h-6 text-blue-600" />
+            <div>
+              <p className="font-semibold text-gray-900">
+                {activeEvent.eventCode} · {activeEvent.eventName}
+              </p>
+              <p className="text-xs text-gray-500">
+                {activeComp?.name}
+                {activeAssignment &&
+                  ` · Panel ${activeAssignment.judgeLabel} · ${activeAssignment.components.join(', ')}`}
+              </p>
+            </div>
+          </div>
+
+          {/* Sahadaki sporcu — puanlama */}
+          <div className="space-y-6">
+            {dances.map((dance) => (
+              <div
+                key={dance ?? 'single'}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <div className="px-5 py-3 border-b border-gray-200 flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-blue-600" />
+                  <span className="font-semibold text-gray-900">{dance ?? 'Puanlama'}</span>
+                  <span className="text-xs text-gray-500">
+                    · Panel {activeAssignment.judgeLabel} · {activeAssignment.components.join(', ')}
+                  </span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-gray-500">
+                      <th className="px-5 py-2 font-medium w-24">Sırt No</th>
+                      {activeAssignment.components.map((c) => (
+                        <th key={c} className="px-5 py-2 font-medium">
+                          {c}
+                        </th>
+                      ))}
+                      <th className="px-5 py-2 font-medium w-32 text-right">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <ScoreRow
+                      key={activeEntry.id}
+                      bibNumber={activeEntry.bibNumber}
+                      components={activeAssignment.components}
+                      dance={dance}
+                      savedValues={(c) => scoreMap.get(`${activeEntry.id}|${dance ?? ''}|${c}`)}
+                      onConfirm={(values) =>
+                        Promise.all(
+                          values.map(({ component, value }) =>
+                            upsertScore({
+                              competitionId: activeEvent.competitionId,
+                              eventId: activeEvent.id,
+                              entryId: activeEntry.id,
+                              judgeId: activeAssignment.judgeId,
+                              judgeAssignmentId: activeAssignment.id,
+                              dance,
+                              component,
+                              value,
+                              mode: 'AUTO',
+                              enteredBy: user?.uid ?? 'hakem',
+                            })
+                          )
+                        ).then(() => undefined)
+                      }
+                    />
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ScoreRow({
+  bibNumber,
+  components,
+  dance,
+  savedValues,
+  onConfirm,
+}: {
+  bibNumber: number
+  components: ScoringComponent[]
+  dance?: string
+  savedValues: (c: ScoringComponent) => number | undefined
+  onConfirm: (values: { component: ScoringComponent; value: number }[]) => Promise<void>
+}) {
+  const [texts, setTexts] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, boolean>>({})
+  const [saved, setSaved] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  // Kaydedilmiş değerleri inputlara yükle / realtime senkron
+  useEffect(() => {
+    const next: Record<string, string> = {}
+    for (const c of components) {
+      const v = savedValues(c)
+      next[c] = v != null ? v.toFixed(scaleFor(c).decimals) : ''
+    }
+    setTexts(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bibNumber, dance, ...components.map((c) => savedValues(c))])
+
+  const setText = (c: string, val: string) => {
+    setTexts((t) => ({ ...t, [c]: val }))
+    setErrors((e) => ({ ...e, [c]: false }))
+    setSaved(false)
+  }
+
+  // Onay popup'ını açmadan önce doğrula
+  const tryConfirm = () => {
+    const errs: Record<string, boolean> = {}
+    let anyFilled = false
+    for (const c of components) {
+      const raw = (texts[c] ?? '').trim()
+      if (raw === '') continue
+      anyFilled = true
+      const v = validateScore(Number(raw), c)
+      if (!v.valid) errs[c] = true
+    }
+    setErrors(errs)
+    if (!anyFilled || Object.keys(errs).length > 0) return
+    setConfirming(true)
+  }
+
+  const filledValues = components
+    .filter((c) => (texts[c] ?? '').trim() !== '')
+    .map((c) => ({ component: c, value: Number(texts[c]) }))
+
+  const doSave = async () => {
+    setBusy(true)
+    try {
+      await onConfirm(filledValues)
+      setSaved(true)
+      setConfirming(false)
+      setTimeout(() => setSaved(false), 1500)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <tr className={`border-b border-gray-100 ${saved ? 'bg-green-50' : ''}`}>
+      <td className="px-5 py-2">
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-900 text-white font-bold">
+          {bibNumber}
+        </span>
+      </td>
+      {components.map((c) => {
+        const scale = scaleFor(c)
+        return (
+          <td key={c} className="px-5 py-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              step={scale.step}
+              min={scale.min}
+              max={scale.max}
+              value={texts[c] ?? ''}
+              onChange={(e) => setText(c, e.target.value)}
+              className={`w-24 rounded-lg border px-3 py-1.5 text-center focus:outline-none focus:ring-2 ${
+                errors[c]
+                  ? 'border-red-400 ring-red-200'
+                  : 'border-gray-300 focus:ring-blue-200'
+              }`}
+              placeholder={`${scale.min.toFixed(scale.decimals)}–${scale.max.toFixed(scale.decimals)}`}
+            />
+          </td>
+        )
+      })}
+      <td className="px-5 py-2 text-right">
+        {saved ? (
+          <span className="inline-flex items-center gap-1 text-sm text-green-600">
+            <CheckCircle2 className="w-4 h-4" /> Kaydedildi
+          </span>
+        ) : (
+          <button
+            onClick={tryConfirm}
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Kaydet
+          </button>
+        )}
+      </td>
+
+      {confirming && (
+        <td className="p-0">
+          <ConfirmDialog
+            bibNumber={bibNumber}
+            dance={dance}
+            values={filledValues}
+            busy={busy}
+            onCancel={() => setConfirming(false)}
+            onConfirm={doSave}
+          />
+        </td>
+      )}
+    </tr>
+  )
+}
+
+/** Kaydetmeden önce hakeme özet gösteren onay popup'ı (BK: anonim — yalnızca sırt no) */
+function ConfirmDialog({
+  bibNumber,
+  dance,
+  values,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  bibNumber: number
+  dance?: string
+  values: { component: ScoringComponent; value: number }[]
+  busy: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+          <h3 className="font-semibold text-gray-900">Puanı Onayla</h3>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gray-900 text-white text-lg font-bold">
+              {bibNumber}
+            </span>
+            <div>
+              <p className="text-sm text-gray-500">Sırt No</p>
+              {dance && <p className="text-xs text-gray-400">{dance}</p>}
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 divide-y divide-gray-100">
+            {values.map(({ component, value }) => (
+              <div key={component} className="flex items-center justify-between px-4 py-2 text-sm">
+                <span className="font-medium text-gray-600">{component}</span>
+                <span className="font-bold text-gray-900">
+                  {value.toFixed(scaleFor(component).decimals)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500">
+            Onayladığınızda puanlar kaydedilir. Gerekirse daha sonra tekrar düzenleyebilirsiniz.
+          </p>
+        </div>
+        <div className="flex gap-3 border-t border-gray-200 px-5 py-3">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            İptal
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {busy ? 'Kaydediliyor…' : 'Onayla'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
