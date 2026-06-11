@@ -41,3 +41,4 @@ yarn-error.log*
 # Misc
 .turbo/
 dist/
+paradancesport/package-lock.json
