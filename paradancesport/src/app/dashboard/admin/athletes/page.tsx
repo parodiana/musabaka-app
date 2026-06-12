@@ -128,8 +128,8 @@ export default function AdminAthletesPage() {
           <p className="text-gray-600 mt-1">İlk sporcuyu eklemek için yukarıdaki butonu kullan.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="px-6 py-3 font-medium">Ad Soyad</th>

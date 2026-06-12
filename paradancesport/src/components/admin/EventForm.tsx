@@ -109,7 +109,7 @@ export function EventForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Kod */}
         <div className="space-y-2">
           <label htmlFor="eventCode" className="block text-sm font-medium text-gray-700">
@@ -146,7 +146,7 @@ export function EventForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Disiplin */}
         <div className="space-y-2">
           <label htmlFor="discipline" className="block text-sm font-medium text-gray-700">
@@ -184,7 +184,7 @@ export function EventForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Cinsiyet */}
         <div className="space-y-2">
           <label htmlFor="gender" className="block text-sm font-medium text-gray-700">

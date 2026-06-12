@@ -7,11 +7,13 @@ import { db } from '@/lib/firebase/client'
 import { mapCompetition } from '@/lib/firebase/competitions'
 import { mapEvent } from '@/lib/firebase/events'
 import { useAuthStore } from '@/store/auth.store'
+import { useI18n } from '@/i18n/useI18n'
 import type { Competition, Event } from '@/types'
 import { ShieldAlert, ClipboardCheck, MinusCircle, Clock } from 'lucide-react'
 
 export default function BashakemDashboard() {
   const { user } = useAuthStore()
+  const { t } = useI18n()
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [awaiting, setAwaiting] = useState<Event[]>([])
 
@@ -41,8 +43,8 @@ export default function BashakemDashboard() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
-          <p className="text-gray-600 mt-2">Bu sayfa Başhakem içindir.</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('common.accessDenied')}</h2>
+          <p className="text-gray-600 mt-2">{t('bp.forChair')}</p>
         </div>
       </div>
     )
@@ -51,8 +53,8 @@ export default function BashakemDashboard() {
   return (
     <div className="space-y-6">
       <div className="rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white p-8 shadow-lg">
-        <h1 className="text-3xl font-bold mb-2">Başhakem Paneli</h1>
-        <p className="text-blue-100">Sonuç onayları ve kesinti yönetimi</p>
+        <h1 className="text-3xl font-bold mb-2">{t('bp.title')}</h1>
+        <p className="text-blue-100">{t('bp.subtitle')}</p>
       </div>
 
       {/* Hızlı erişim */}
@@ -63,8 +65,8 @@ export default function BashakemDashboard() {
         >
           <ClipboardCheck className="w-8 h-8 text-blue-600" />
           <div>
-            <p className="font-semibold text-blue-900">Onay Kapısı</p>
-            <p className="text-sm text-blue-700">Sonuçları hesapla, incele, onayla / iade et</p>
+            <p className="font-semibold text-blue-900">{t('bp.approvalGate')}</p>
+            <p className="text-sm text-blue-700">{t('bp.approvalGateDesc')}</p>
           </div>
         </Link>
         <Link
@@ -73,8 +75,8 @@ export default function BashakemDashboard() {
         >
           <MinusCircle className="w-8 h-8 text-gray-600" />
           <div>
-            <p className="font-semibold text-gray-900">Kesintiler</p>
-            <p className="text-sm text-gray-600">Kesinti gir ve yönet</p>
+            <p className="font-semibold text-gray-900">{t('bp.deductions')}</p>
+            <p className="text-sm text-gray-600">{t('bp.deductionsDesc')}</p>
           </div>
         </Link>
       </div>
@@ -83,14 +85,14 @@ export default function BashakemDashboard() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-200 flex items-center gap-2">
           <Clock className="w-4 h-4 text-amber-600" />
-          <span className="font-semibold text-gray-900">Onay Bekleyen Kategoriler</span>
+          <span className="font-semibold text-gray-900">{t('bp.awaitingTitle')}</span>
           <span className="ml-auto rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs font-medium">
             {awaiting.length}
           </span>
         </div>
         {awaiting.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm text-gray-500">
-            Şu anda onay bekleyen kategori yok.
+            {t('bp.awaitingEmpty')}
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
@@ -107,7 +109,7 @@ export default function BashakemDashboard() {
                     <p className="text-xs text-gray-500">{compName.get(ev.competitionId) ?? ''}</p>
                   </div>
                   <span className="rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-medium">
-                    Onay Bekliyor
+                    {t('bp.awaitingBadge')}
                   </span>
                 </Link>
               </li>

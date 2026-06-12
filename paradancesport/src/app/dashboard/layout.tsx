@@ -55,13 +55,13 @@ export default function DashboardLayout({
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden print:block print:overflow-visible">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden print:block print:overflow-visible">
         {/* Header */}
         <Header onMenuClick={() => setMobileOpen(true)} />
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto print:overflow-visible print:h-auto">
-          <div className="p-4 sm:p-6">
+          <div className="p-4 sm:p-6 min-w-0">
             {allowed ? (
               children
             ) : (

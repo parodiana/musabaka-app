@@ -96,7 +96,7 @@ export function CompetitionForm({ competition, onSuccess, onCancel }: Competitio
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Kod */}
         <div className="space-y-2">
           <label htmlFor="code" className="block text-sm font-medium text-gray-700">
@@ -148,7 +148,7 @@ export function CompetitionForm({ competition, onSuccess, onCancel }: Competitio
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Varsayılan giriş modu */}
         <div className="space-y-2">
           <label htmlFor="entryMode" className="block text-sm font-medium text-gray-700">

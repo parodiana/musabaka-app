@@ -16,6 +16,7 @@ import {
   returnEventResults,
 } from '@/lib/firebase/results'
 import { useAuthStore } from '@/store/auth.store'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   Competition,
   Event,
@@ -42,13 +43,6 @@ import {
 const COMPONENTS: ScoringComponent[] = ['TS', 'MCP', 'DL']
 const danceKey = (d?: string) => (d && d.trim() ? d.trim() : '')
 
-const STATUS_LABEL: Record<EventStatus, string> = {
-  PENDING: 'Beklemede',
-  IN_PROGRESS: 'Puanlama Sürüyor',
-  AWAITING_APPROVAL: 'Onay Bekliyor',
-  APPROVED: 'Onaylandı',
-}
-
 const STATUS_STYLE: Record<EventStatus, string> = {
   PENDING: 'bg-gray-100 text-gray-700',
   IN_PROGRESS: 'bg-blue-100 text-blue-700',
@@ -58,6 +52,7 @@ const STATUS_STYLE: Record<EventStatus, string> = {
 
 export default function ApprovalPage() {
   const { user } = useAuthStore()
+  const { t } = useI18n()
 
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -192,10 +187,10 @@ export default function ApprovalPage() {
         aggregationMode: selectedComp.aggregationMode,
       })
       if (n === 0) {
-        setError('Hesaplanacak skor bulunamadı. Önce hakemler puan girmeli.')
+        setError(t('appr.noScores'))
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Hesaplama hatası')
+      setError(e instanceof Error ? e.message : t('appr.errCalc'))
     } finally {
       setBusy(false)
     }
@@ -209,7 +204,7 @@ export default function ApprovalPage() {
       await approveEventResults(selectedEvent.id, user.uid)
       setConfirm(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Onay hatası')
+      setError(e instanceof Error ? e.message : t('appr.errApprove'))
     } finally {
       setBusy(false)
     }
@@ -223,7 +218,7 @@ export default function ApprovalPage() {
       await returnEventResults(selectedEvent.id)
       setConfirm(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'İade hatası')
+      setError(e instanceof Error ? e.message : t('appr.errReturn'))
     } finally {
       setBusy(false)
     }
@@ -234,8 +229,8 @@ export default function ApprovalPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
-          <p className="text-gray-600 mt-2">Bu sayfa Başhakem içindir.</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('common.accessDenied')}</h2>
+          <p className="text-gray-600 mt-2">{t('appr.forChair')}</p>
         </div>
       </div>
     )
@@ -244,16 +239,14 @@ export default function ApprovalPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Onay Kapısı (Başhakem)</h1>
-        <p className="text-gray-600 mt-1">
-          Sonuçları hesapla, incele ve onayla. Onaysız hiçbir sonuç ilan edilmez.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('appr.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('appr.subtitle')}</p>
       </div>
 
       {/* Seçimler */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600">Yarışma</label>
+          <label className="block text-xs font-medium text-gray-600">{t('common.competition')}</label>
           <select
             value={compId}
             onChange={(e) => {
@@ -263,7 +256,7 @@ export default function ApprovalPage() {
             }}
             className="input"
           >
-            <option value="">— Seç —</option>
+            <option value="">{t('common.select')}</option>
             {competitions.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -272,7 +265,7 @@ export default function ApprovalPage() {
           </select>
         </div>
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600">Kategori</label>
+          <label className="block text-xs font-medium text-gray-600">{t('common.category')}</label>
           <select
             value={eventId}
             onChange={(e) => {
@@ -282,10 +275,10 @@ export default function ApprovalPage() {
             className="input"
             disabled={!compId}
           >
-            <option value="">— Seç —</option>
+            <option value="">{t('common.select')}</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>
-                {ev.eventCode} · {ev.eventName} — {STATUS_LABEL[ev.status]}
+                {ev.eventCode} · {ev.eventName} — {t(`estatus.${ev.status}`)}
               </option>
             ))}
           </select>
@@ -309,14 +302,15 @@ export default function ApprovalPage() {
                   {selectedEvent.eventCode} · {selectedEvent.eventName}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Toplama modu: {selectedComp?.aggregationMode === 'MEAN' ? 'Düz Ortalama' : 'Kırpılmış Ortalama'}
+                  {t('appr.aggMode')}:{' '}
+                  {selectedComp?.aggregationMode === 'MEAN' ? t('common.plainMean') : t('common.trimmedMean')}
                   {selectedEvent.dances.length > 0 && ` · ${selectedEvent.dances.join(', ')}`}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[selectedEvent.status]}`}>
-                {STATUS_LABEL[selectedEvent.status]}
+                {t(`estatus.${selectedEvent.status}`)}
               </span>
             </div>
           </div>
@@ -329,36 +323,37 @@ export default function ApprovalPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               <Calculator className="w-4 h-4" />
-              {results.length > 0 ? 'Yeniden Hesapla' : 'Sonuçları Hesapla'}
+              {results.length > 0 ? t('appr.recalculate') : t('appr.calculate')}
             </button>
             <button
               onClick={() => setConfirm('approve')}
               disabled={busy || results.length === 0 || selectedEvent.status === 'APPROVED'}
               className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
             >
-              <CheckCircle2 className="w-4 h-4" /> Onayla & İlan Et
+              <CheckCircle2 className="w-4 h-4" /> {t('appr.approve')}
             </button>
             <button
               onClick={() => setConfirm('return')}
               disabled={busy || results.length === 0}
               className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
             >
-              <Undo2 className="w-4 h-4" /> İade Et (Düzeltmeye Dön)
+              <Undo2 className="w-4 h-4" /> {t('appr.return')}
             </button>
           </div>
 
           {/* Sonuç tablosu */}
           {results.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-gray-500">
-              Henüz sonuç hesaplanmadı. &quot;Sonuçları Hesapla&quot; ile başlayın.
+              {t('appr.notCalculated')}
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-gray-500">
                   <th className="px-3 py-2 font-medium w-10"></th>
-                  <th className="px-5 py-2 font-medium w-16">Sıra</th>
-                  <th className="px-5 py-2 font-medium w-24">Sırt No</th>
+                  <th className="px-5 py-2 font-medium w-16">{t('common.rank')}</th>
+                  <th className="px-5 py-2 font-medium w-24">{t('common.bib')}</th>
                   {!multiDance && (
                     <>
                       <th className="px-5 py-2 font-medium">TS</th>
@@ -366,8 +361,8 @@ export default function ApprovalPage() {
                       <th className="px-5 py-2 font-medium">DL</th>
                     </>
                   )}
-                  <th className="px-5 py-2 font-medium">Kesinti</th>
-                  <th className="px-5 py-2 font-medium text-right">Final</th>
+                  <th className="px-5 py-2 font-medium">{t('common.deduction')}</th>
+                  <th className="px-5 py-2 font-medium text-right">{t('common.final')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -391,7 +386,7 @@ export default function ApprovalPage() {
                           <span className="inline-flex items-center gap-1 font-bold text-gray-900">
                             {r.rank}
                             {r.tied && (
-                              <span className="text-xs font-normal text-amber-600">(eş)</span>
+                              <span className="text-xs font-normal text-amber-600">({t('appr.tied')})</span>
                             )}
                           </span>
                         </td>
@@ -433,6 +428,7 @@ export default function ApprovalPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -443,7 +439,7 @@ export default function ApprovalPage() {
           <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
               <h3 className="font-semibold text-gray-900">
-                {confirm === 'approve' ? 'Sonuçları Onayla' : 'Sonuçları İade Et'}
+                {confirm === 'approve' ? t('appr.confirmApproveTitle') : t('appr.confirmReturnTitle')}
               </h3>
               <button onClick={() => setConfirm(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -451,23 +447,15 @@ export default function ApprovalPage() {
             </div>
             <div className="px-5 py-4 space-y-3 max-h-[50vh] overflow-y-auto">
               <p className="text-sm text-gray-600">
-                {confirm === 'approve' ? (
-                  <>
-                    <strong>{selectedEvent.eventName}</strong> kategorisinin {results.length} sonucu
-                    onaylanacak ve ilan edilecek. Bu işlemden sonra durum &quot;Onaylandı&quot; olur.
-                  </>
-                ) : (
-                  <>
-                    <strong>{selectedEvent.eventName}</strong> kategorisi düzeltme için puanlamaya
-                    döndürülecek (durum: Puanlama Sürüyor). Sonuçlar &quot;İade&quot; olarak işaretlenir.
-                  </>
-                )}
+                {confirm === 'approve'
+                  ? t('appr.confirmApproveText', { event: selectedEvent.eventName, n: results.length })
+                  : t('appr.confirmReturnText', { event: selectedEvent.eventName })}
               </p>
               <div className="rounded-lg border border-gray-200 divide-y divide-gray-100 text-sm">
                 {sortedResults.map((r) => (
                   <div key={r.id} className="flex items-center justify-between px-4 py-2">
                     <span className="text-gray-600">
-                      #{r.rank} · Sırt {r.bibNumber}
+                      #{r.rank} · {t('common.bib')} {r.bibNumber}
                     </span>
                     <span className="font-bold text-gray-900 tabular-nums">
                       {r.finalScore.toFixed(3)}
@@ -482,7 +470,7 @@ export default function ApprovalPage() {
                 disabled={busy}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Vazgeç
+                {t('appr.giveUp')}
               </button>
               {confirm === 'approve' ? (
                 <button
@@ -490,7 +478,7 @@ export default function ApprovalPage() {
                   disabled={busy}
                   className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                 >
-                  {busy ? 'Onaylanıyor…' : 'Onayla & İlan Et'}
+                  {busy ? t('appr.approving') : t('appr.approve')}
                 </button>
               ) : (
                 <button
@@ -498,7 +486,7 @@ export default function ApprovalPage() {
                   disabled={busy}
                   className="flex-1 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
                 >
-                  {busy ? 'İade ediliyor…' : 'İade Et'}
+                  {busy ? t('appr.returning') : t('appr.return')}
                 </button>
               )}
             </div>
@@ -525,6 +513,7 @@ function JudgeDetail({
   judgeMap: Map<string, Judge>
   mode: 'TRIMMED' | 'MEAN'
 }) {
+  const { t } = useI18n()
   const activeComponents = COMPONENTS.filter((c) => componentJudges[c].length > 0)
 
   const meanOf = (dance: string | undefined, c: ScoringComponent): number | undefined => {
@@ -629,9 +618,7 @@ function JudgeDetail({
         </div>
       ))}
       {mode === 'MEAN' && (
-        <p className="text-xs text-gray-400">
-          Düz ortalama modu — min/maks atılmaz.
-        </p>
+        <p className="text-xs text-gray-400">{t('appr.detailMeanNote')}</p>
       )}
     </div>
   )

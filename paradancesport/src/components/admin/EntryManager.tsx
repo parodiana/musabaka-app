@@ -245,7 +245,7 @@ export function EntryManager({ event }: { event: Event }) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Sırt no */}
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-600">Sırt No</label>
