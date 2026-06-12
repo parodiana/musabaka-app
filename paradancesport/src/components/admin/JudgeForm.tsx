@@ -53,7 +53,7 @@ export function JudgeForm({ judge, linkableUsers = [], onSuccess, onCancel }: Ju
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Ad */}
         <div className="space-y-2">
           <label htmlFor="givenName" className="block text-sm font-medium text-gray-700">

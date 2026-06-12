@@ -87,7 +87,7 @@ export default function ScoreBoardPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t('common.accessDenied')}</h2>
         </div>
       </div>
     )
@@ -119,7 +119,7 @@ export default function ScoreBoardPage() {
       {/* Seçimler */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600">Yarışma</label>
+          <label className="block text-xs font-medium text-gray-600">{t('common.competition')}</label>
           <select
             value={compId}
             onChange={(e) => {
@@ -128,7 +128,7 @@ export default function ScoreBoardPage() {
             }}
             className="input"
           >
-            <option value="">— Seç —</option>
+            <option value="">{t('common.select')}</option>
             {competitions.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -137,14 +137,14 @@ export default function ScoreBoardPage() {
           </select>
         </div>
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-600">Kategori</label>
+          <label className="block text-xs font-medium text-gray-600">{t('common.category')}</label>
           <select
             value={eventId}
             onChange={(e) => setEventId(e.target.value)}
             className="input"
             disabled={!compId}
           >
-            <option value="">— Seç —</option>
+            <option value="">{t('common.select')}</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>
                 {ev.eventCode} · {ev.eventName}
@@ -163,31 +163,31 @@ export default function ScoreBoardPage() {
               <span className="font-semibold text-gray-900">{selectedEvent?.eventName}</span>
             </div>
             <span className="text-xs text-gray-500">
-              {mode === 'TRIMMED' ? 'Trimmed Mean' : 'Düz Ortalama'} · {results.length} yarışmacı
+              {mode === 'TRIMMED' ? t('common.trimmedMean') : t('common.plainMean')} · {results.length}{' '}
+              {t('scoreboard.competitors')}
             </span>
           </div>
 
           {results.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              Henüz puan girilmedi. Masa hakemi puan girişi yapınca burada canlı sıralama belirir.
-            </div>
+            <div className="p-12 text-center text-gray-500">{t('scoreboard.empty')}</div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="px-5 py-2 font-medium w-16">Sıra</th>
-                  <th className="px-5 py-2 font-medium">Sırt No</th>
+                  <th className="px-5 py-2 font-medium w-16">{t('common.rank')}</th>
+                  <th className="px-5 py-2 font-medium">{t('common.bib')}</th>
                   {singleDance && (
                     <>
                       <th className="px-5 py-2 font-medium text-right">TS</th>
                       <th className="px-5 py-2 font-medium text-right">MCP</th>
                       <th className="px-5 py-2 font-medium text-right">DL</th>
-                      <th className="px-5 py-2 font-medium text-right">Kesinti</th>
+                      <th className="px-5 py-2 font-medium text-right">{t('common.deduction')}</th>
                     </>
                   )}
-                  {!singleDance && <th className="px-5 py-2 font-medium text-center">Dans</th>}
-                  <th className="px-5 py-2 font-medium text-right">Final</th>
-                  <th className="px-5 py-2 font-medium text-right">Tie-break</th>
+                  {!singleDance && <th className="px-5 py-2 font-medium text-center">{t('scoreboard.dances')}</th>}
+                  <th className="px-5 py-2 font-medium text-right">{t('common.final')}</th>
+                  <th className="px-5 py-2 font-medium text-right">{t('scoreboard.tieBreak')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -209,7 +209,7 @@ export default function ScoreBoardPage() {
                         >
                           {r.rank}
                         </span>
-                        {r.tied && <span className="ml-1 text-xs text-amber-600">eşit</span>}
+                        {r.tied && <span className="ml-1 text-xs text-amber-600">{t('appr.tied')}</span>}
                       </td>
                       <td className="px-5 py-2">
                         <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-900 text-white font-bold">
@@ -240,6 +240,7 @@ export default function ScoreBoardPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

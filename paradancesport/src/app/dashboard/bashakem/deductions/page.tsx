@@ -8,23 +8,23 @@ import { mapEvent } from '@/lib/firebase/events'
 import { mapEntry } from '@/lib/firebase/entries'
 import { mapDeduction, createDeduction, deleteDeduction } from '@/lib/firebase/deductions'
 import { useAuthStore } from '@/store/auth.store'
+import { useI18n } from '@/i18n/useI18n'
 import type { Competition, Event, Entry, Deduction, DeductionType } from '@/types'
 import { ShieldAlert, MinusCircle, Trash2 } from 'lucide-react'
 
-const DEDUCTION_LABELS: Record<DeductionType, string> = {
-  FALL: 'Düşme',
-  FLOOR_DANCE: 'Yerde Dans',
-  ACCESSORY: 'Aksesuar İhlali',
-  TIME_LIMIT: 'Süre Aşımı',
-  DRESS_CODE: 'Kıyafet İhlali',
-  EXCESS_LIFT: 'Fazla Kaldırma',
-  DSQ: 'Diskalifiye',
-}
-
-const DEDUCTION_TYPES = Object.keys(DEDUCTION_LABELS) as DeductionType[]
+const DEDUCTION_TYPES: DeductionType[] = [
+  'FALL',
+  'FLOOR_DANCE',
+  'ACCESSORY',
+  'TIME_LIMIT',
+  'DRESS_CODE',
+  'EXCESS_LIFT',
+  'DSQ',
+]
 
 export default function DeductionsPage() {
   const { user } = useAuthStore()
+  const { t } = useI18n()
 
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -109,12 +109,12 @@ export default function DeductionsPage() {
   const handleSubmit = async () => {
     setError('')
     if (!selectedComp || !selectedEvent || !entryId) {
-      setError('Yarışma, kategori ve sırt no seçin.')
+      setError(t('deduct.errSelect'))
       return
     }
     const amt = Number(amount)
     if (!amount || isNaN(amt) || amt <= 0) {
-      setError('Geçerli bir kesinti miktarı girin (0’dan büyük).')
+      setError(t('deduct.errAmount'))
       return
     }
     setBusy(true)
@@ -131,7 +131,7 @@ export default function DeductionsPage() {
       })
       resetForm()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kesinti kaydedilemedi')
+      setError(e instanceof Error ? e.message : t('deduct.errSave'))
     } finally {
       setBusy(false)
     }
@@ -142,8 +142,8 @@ export default function DeductionsPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
-          <p className="text-gray-600 mt-2">Bu sayfa Başhakem/Admin içindir.</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('common.accessDenied')}</h2>
+          <p className="text-gray-600 mt-2">{t('deduct.forChairAdmin')}</p>
         </div>
       </div>
     )
@@ -152,17 +152,15 @@ export default function DeductionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Kesinti Girişi</h1>
-        <p className="text-gray-600 mt-1">
-          Kesintileri doğrudan Başhakem/Admin girer (kolektif oylama yok). Sonuç hesaplanırken düşülür.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('deduct.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('deduct.subtitle')}</p>
       </div>
 
       {/* Form */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">Yarışma</label>
+            <label className="block text-xs font-medium text-gray-600">{t('common.competition')}</label>
             <select
               value={compId}
               onChange={(e) => {
@@ -172,7 +170,7 @@ export default function DeductionsPage() {
               }}
               className="input"
             >
-              <option value="">— Seç —</option>
+              <option value="">{t('common.select')}</option>
               {competitions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -181,7 +179,7 @@ export default function DeductionsPage() {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">Kategori</label>
+            <label className="block text-xs font-medium text-gray-600">{t('common.category')}</label>
             <select
               value={eventId}
               onChange={(e) => {
@@ -191,7 +189,7 @@ export default function DeductionsPage() {
               className="input"
               disabled={!compId}
             >
-              <option value="">— Seç —</option>
+              <option value="">{t('common.select')}</option>
               {events.map((ev) => (
                 <option key={ev.id} value={ev.id}>
                   {ev.eventCode} · {ev.eventName}
@@ -203,14 +201,14 @@ export default function DeductionsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">Sırt No</label>
+            <label className="block text-xs font-medium text-gray-600">{t('common.bib')}</label>
             <select
               value={entryId}
               onChange={(e) => setEntryId(e.target.value)}
               className="input"
               disabled={!eventId}
             >
-              <option value="">— Seç —</option>
+              <option value="">{t('common.select')}</option>
               {entries.map((en) => (
                 <option key={en.id} value={en.id}>
                   {en.bibNumber}
@@ -219,7 +217,7 @@ export default function DeductionsPage() {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">Dans</label>
+            <label className="block text-xs font-medium text-gray-600">{t('common.dance')}</label>
             <select
               value={dance}
               onChange={(e) => setDance(e.target.value)}
@@ -233,21 +231,21 @@ export default function DeductionsPage() {
                   </option>
                 ))
               ) : (
-                <option value="">Tüm program (danssız)</option>
+                <option value="">{t('deduct.danceAll')}</option>
               )}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">Kesinti Türü</label>
+            <label className="block text-xs font-medium text-gray-600">{t('deduct.type')}</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as DeductionType)}
               className="input"
               disabled={!eventId}
             >
-              {DEDUCTION_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {DEDUCTION_LABELS[t]}
+              {DEDUCTION_TYPES.map((dt) => (
+                <option key={dt} value={dt}>
+                  {t(`dtype.${dt}`)}
                 </option>
               ))}
             </select>
@@ -256,7 +254,7 @@ export default function DeductionsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">Miktar (puan)</label>
+            <label className="block text-xs font-medium text-gray-600">{t('deduct.amount')}</label>
             <input
               type="number"
               inputMode="decimal"
@@ -265,18 +263,18 @@ export default function DeductionsPage() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="input"
-              placeholder="örn. 1.0"
+              placeholder="1.0"
               disabled={!eventId}
             />
           </div>
           <div className="space-y-1 md:col-span-2">
-            <label className="block text-xs font-medium text-gray-600">Gerekçe (opsiyonel)</label>
+            <label className="block text-xs font-medium text-gray-600">{t('deduct.reason')}</label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="input"
-              placeholder="örn. İkinci turda düşme"
+              placeholder={t('deduct.reasonPh')}
               disabled={!eventId}
             />
           </div>
@@ -295,7 +293,7 @@ export default function DeductionsPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             <MinusCircle className="w-4 h-4" />
-            {busy ? 'Kaydediliyor…' : 'Kesinti Ekle'}
+            {busy ? t('common.saving') : t('deduct.add')}
           </button>
         </div>
       </div>
@@ -304,20 +302,21 @@ export default function DeductionsPage() {
       {eventId && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-200">
-            <span className="font-semibold text-gray-900">Bu Kategorideki Kesintiler</span>
+            <span className="font-semibold text-gray-900">{t('deduct.listTitle')}</span>
             <span className="ml-2 text-xs text-gray-500">({deductions.length})</span>
           </div>
           {deductions.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-gray-500">Henüz kesinti yok.</div>
+            <div className="px-5 py-8 text-center text-sm text-gray-500">{t('deduct.empty')}</div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="px-5 py-2 font-medium">Sırt No</th>
-                  <th className="px-5 py-2 font-medium">Dans</th>
-                  <th className="px-5 py-2 font-medium">Tür</th>
-                  <th className="px-5 py-2 font-medium">Gerekçe</th>
-                  <th className="px-5 py-2 font-medium text-right">Miktar</th>
+                  <th className="px-5 py-2 font-medium">{t('common.bib')}</th>
+                  <th className="px-5 py-2 font-medium">{t('common.dance')}</th>
+                  <th className="px-5 py-2 font-medium">{t('deduct.colType')}</th>
+                  <th className="px-5 py-2 font-medium">{t('deduct.colReason')}</th>
+                  <th className="px-5 py-2 font-medium text-right">{t('deduct.colAmount')}</th>
                   <th className="px-5 py-2 font-medium w-12"></th>
                 </tr>
               </thead>
@@ -327,8 +326,8 @@ export default function DeductionsPage() {
                     <td className="px-5 py-2 font-bold text-gray-900">
                       {bibByEntry.get(d.entryId) ?? '—'}
                     </td>
-                    <td className="px-5 py-2 text-gray-600">{d.dance || 'Tüm program'}</td>
-                    <td className="px-5 py-2 text-gray-600">{DEDUCTION_LABELS[d.type]}</td>
+                    <td className="px-5 py-2 text-gray-600">{d.dance || t('deduct.allProgram')}</td>
+                    <td className="px-5 py-2 text-gray-600">{t(`dtype.${d.type}`)}</td>
                     <td className="px-5 py-2 text-gray-500">{d.reason || '—'}</td>
                     <td className="px-5 py-2 text-right font-bold text-red-600 tabular-nums">
                       −{d.amount.toFixed(2)}
@@ -337,7 +336,7 @@ export default function DeductionsPage() {
                       <button
                         onClick={() => deleteDeduction(d.id)}
                         className="text-gray-400 hover:text-red-600"
-                        title="Sil"
+                        title={t('common.delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -346,6 +345,7 @@ export default function DeductionsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

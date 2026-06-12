@@ -279,7 +279,7 @@ export default function CompetitionImportPage() {
 
             <div className="space-y-3">
               {FULL_IMPORT_FIELDS.map((field) => (
-                <div key={field.key} className="grid grid-cols-2 gap-4 items-center">
+                <div key={field.key} className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 sm:items-center">
                   <label className="text-sm font-medium text-gray-700">
                     {field.label}
                     {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -354,8 +354,8 @@ export default function CompetitionImportPage() {
             <div className="px-4 py-2 border-b border-gray-200 text-sm font-semibold text-gray-700">
               Türetilen Kategoriler
             </div>
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-sm">
+            <div className="max-h-64 overflow-auto">
+              <table className="w-full text-sm min-w-[560px]">
                 <tbody>
                   {plan.events.map((ev) => (
                     <tr key={ev.eventCode} className="border-b border-gray-100">

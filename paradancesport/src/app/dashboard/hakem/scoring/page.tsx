@@ -11,6 +11,7 @@ import { mapEntry } from '@/lib/firebase/entries'
 import { mapScore, upsertScore } from '@/lib/firebase/scores'
 import { validateScore, scaleFor } from '@/lib/scoring/validators'
 import { useAuthStore } from '@/store/auth.store'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   Competition,
   Event,
@@ -24,6 +25,7 @@ import { ShieldAlert, ClipboardList, CheckCircle2, X, Trophy, Hourglass } from '
 
 export default function HakemScoringPage() {
   const { user } = useAuthStore()
+  const { t } = useI18n()
 
   const [judges, setJudges] = useState<Judge[]>([])
   const [competitions, setCompetitions] = useState<Competition[]>([])
@@ -129,8 +131,8 @@ export default function HakemScoringPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
-          <p className="text-gray-600 mt-2">Bu sayfa hakemler içindir.</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('common.accessDenied')}</h2>
+          <p className="text-gray-600 mt-2">{t('hakem.forJudges')}</p>
         </div>
       </div>
     )
@@ -141,10 +143,8 @@ export default function HakemScoringPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
           <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Hakem kaydı bağlı değil</h2>
-          <p className="text-gray-600 mt-2">
-            Kullanıcı hesabınız bir hakem kaydına bağlanmamış. Lütfen yöneticiyle iletişime geçin.
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('hakem.notLinkedTitle')}</h2>
+          <p className="text-gray-600 mt-2">{t('hakem.notLinkedText')}</p>
         </div>
       </div>
     )
@@ -153,24 +153,17 @@ export default function HakemScoringPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Puanlama (Hakem)</h1>
-        <p className="text-gray-600 mt-1">
-          Masa hakemi sahaya aldığı yarışmacıyı gönderir; siz yalnızca o sırt no&apos;yu puanlarsınız.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('hakem.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('hakem.subtitle')}</p>
       </div>
 
       {!activeAssignment || !activeEvent || !activeEntry ? (
         <div className="rounded-xl bg-blue-50 border border-blue-200 p-10 text-center">
           <Hourglass className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-blue-900">Şu an puanlanacak sporcu yok</h2>
-          <p className="text-blue-700 mt-2 max-w-md mx-auto">
-            Masa hakemi sahadaki yarışmacıyı gönderdiğinde sırt no burada belirir ve
-            puanlayabilirsiniz. Lütfen bekleyin.
-          </p>
+          <h2 className="text-lg font-semibold text-blue-900">{t('hakem.noActiveTitle')}</h2>
+          <p className="text-blue-700 mt-2 max-w-md mx-auto">{t('hakem.noActiveText')}</p>
           {myAssignments.length === 0 && myJudgeId && (
-            <p className="text-xs text-blue-500 mt-4">
-              (Henüz size atanmış bir kategori yok.)
-            </p>
+            <p className="text-xs text-blue-500 mt-4">{t('hakem.noAssignmentHint')}</p>
           )}
         </div>
       ) : (
@@ -199,21 +192,22 @@ export default function HakemScoringPage() {
               >
                 <div className="px-5 py-3 border-b border-gray-200 flex items-center gap-2">
                   <ClipboardList className="w-4 h-4 text-blue-600" />
-                  <span className="font-semibold text-gray-900">{dance ?? 'Puanlama'}</span>
+                  <span className="font-semibold text-gray-900">{dance ?? t('common.scoring')}</span>
                   <span className="text-xs text-gray-500">
-                    · Panel {activeAssignment.judgeLabel} · {activeAssignment.components.join(', ')}
+                    · {t('common.panel')} {activeAssignment.judgeLabel} · {activeAssignment.components.join(', ')}
                   </span>
                 </div>
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[480px]">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-gray-500">
-                      <th className="px-5 py-2 font-medium w-24">Sırt No</th>
+                      <th className="px-5 py-2 font-medium w-24">{t('common.bib')}</th>
                       {activeAssignment.components.map((c) => (
                         <th key={c} className="px-5 py-2 font-medium">
                           {c}
                         </th>
                       ))}
-                      <th className="px-5 py-2 font-medium w-32 text-right">İşlem</th>
+                      <th className="px-5 py-2 font-medium w-32 text-right">{t('common.action')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -244,6 +238,7 @@ export default function HakemScoringPage() {
                     />
                   </tbody>
                 </table>
+                </div>
               </div>
             ))}
           </div>
@@ -266,6 +261,7 @@ function ScoreRow({
   savedValues: (c: ScoringComponent) => number | undefined
   onConfirm: (values: { component: ScoringComponent; value: number }[]) => Promise<void>
 }) {
+  const { t } = useI18n()
   const [texts, setTexts] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [saved, setSaved] = useState(false)
@@ -353,14 +349,14 @@ function ScoreRow({
       <td className="px-5 py-2 text-right">
         {saved ? (
           <span className="inline-flex items-center gap-1 text-sm text-green-600">
-            <CheckCircle2 className="w-4 h-4" /> Kaydedildi
+            <CheckCircle2 className="w-4 h-4" /> {t('common.saved')}
           </span>
         ) : (
           <button
             onClick={tryConfirm}
             className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
           >
-            Kaydet
+            {t('common.save')}
           </button>
         )}
       </td>
@@ -397,11 +393,12 @@ function ConfirmDialog({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-          <h3 className="font-semibold text-gray-900">Puanı Onayla</h3>
+          <h3 className="font-semibold text-gray-900">{t('hakem.confirmTitle')}</h3>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -412,7 +409,7 @@ function ConfirmDialog({
               {bibNumber}
             </span>
             <div>
-              <p className="text-sm text-gray-500">Sırt No</p>
+              <p className="text-sm text-gray-500">{t('common.bib')}</p>
               {dance && <p className="text-xs text-gray-400">{dance}</p>}
             </div>
           </div>
@@ -426,9 +423,7 @@ function ConfirmDialog({
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-500">
-            Onayladığınızda puanlar kaydedilir. Gerekirse daha sonra tekrar düzenleyebilirsiniz.
-          </p>
+          <p className="text-xs text-gray-500">{t('hakem.confirmNote')}</p>
         </div>
         <div className="flex gap-3 border-t border-gray-200 px-5 py-3">
           <button
@@ -436,14 +431,14 @@ function ConfirmDialog({
             disabled={busy}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            İptal
+            {t('common.cancel')}
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
             className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {busy ? 'Kaydediliyor…' : 'Onayla'}
+            {busy ? t('common.saving') : t('common.confirm')}
           </button>
         </div>
       </div>

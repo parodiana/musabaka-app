@@ -185,9 +185,9 @@ export function JudgeAssignmentManager({ event }: { event: Event }) {
           Hakem Ata
         </h3>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Hakem seç */}
-          <div className="col-span-2 space-y-1">
+          <div className="sm:col-span-2 space-y-1">
             <label className="block text-xs font-medium text-gray-600">Hakem</label>
             <select
               value={selectedJudgeId}

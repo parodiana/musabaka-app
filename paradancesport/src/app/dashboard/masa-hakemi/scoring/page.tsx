@@ -12,6 +12,7 @@ import { mapScore, upsertScore } from '@/lib/firebase/scores'
 import { validateScore, scaleFor } from '@/lib/scoring/validators'
 import { aggregate } from '@/lib/scoring/trimmed-mean'
 import { useAuthStore } from '@/store/auth.store'
+import { useI18n } from '@/i18n/useI18n'
 import type {
   Competition,
   Event,
@@ -28,6 +29,7 @@ const danceKey = (d?: string) => (d && d.trim() ? d.trim() : '')
 
 export default function MasaHakemiScoringPage() {
   const { user } = useAuthStore()
+  const { t } = useI18n()
 
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -224,8 +226,8 @@ export default function MasaHakemiScoringPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900">Erişim Engellendi</h2>
-          <p className="text-gray-600 mt-2">Bu sayfa masa hakemi içindir.</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('common.accessDenied')}</h2>
+          <p className="text-gray-600 mt-2">{t('masa.forTable')}</p>
         </div>
       </div>
     )
