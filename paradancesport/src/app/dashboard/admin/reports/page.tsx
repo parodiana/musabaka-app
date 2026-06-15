@@ -240,8 +240,23 @@ export default function ReportsPage() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName)
     }
 
-    const safe = `${selectedComp.name}_${selectedEvent.eventCode}`.replace(/[^\w\-]+/g, '_')
-    XLSX.writeFile(wb, `${safe}.xlsx`)
+    const safe = `${selectedComp.name}_${selectedEvent.eventCode || selectedEvent.eventName}`.replace(
+      /[^\w\-]+/g,
+      '_'
+    )
+    // Blob tabanlı indirme — XLSX.writeFile bazı tarayıcı/bundler kurulumlarında çalışmaz
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([out], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safe}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   if (user && user.role !== 'admin') {
@@ -521,7 +536,9 @@ export default function ReportsPage() {
                 .sort((a, b) => a.judgeLabel.localeCompare(b.judgeLabel))
                 .map((a) => {
                   const j = judgeMap.get(a.judgeId)
-                  return `${a.judgeLabel}: ${j ? `${j.givenName} ${j.familyName}` : a.judgeId}`
+                  const name = j ? `${j.givenName} ${j.familyName}` : a.judgeId
+                  const country = j?.country ? ` (${j.country})` : ''
+                  return `${a.judgeLabel}: ${name}${country}`
                 })
                 .join('   ')}
             </p>

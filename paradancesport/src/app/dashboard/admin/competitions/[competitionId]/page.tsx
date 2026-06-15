@@ -30,6 +30,7 @@ import {
   Users,
   Gavel,
   ListChecks,
+  FileText,
 } from 'lucide-react'
 
 const statusLabels: Record<string, string> = {
@@ -216,16 +217,32 @@ export default function CompetitionDetailPage() {
               · {competition.venue}
             </p>
           </div>
-          <button
-            onClick={() => {
-              setEditing(null)
-              setShowForm(true)
-            }}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Yeni Kategori
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/dashboard/admin/competitions/${competitionId}/startlist`}
+              className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <FileText className="w-5 h-5" />
+              Sırt No Listesi (PDF)
+            </Link>
+            <Link
+              href={`/dashboard/admin/competitions/${competitionId}/assignments`}
+              className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Gavel className="w-5 h-5" />
+              Hakem Görev Listesi (PDF)
+            </Link>
+            <button
+              onClick={() => {
+                setEditing(null)
+                setShowForm(true)
+              }}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Yeni Kategori
+            </button>
+          </div>
         </div>
       </div>
 

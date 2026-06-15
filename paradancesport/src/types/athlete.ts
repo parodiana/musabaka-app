@@ -19,6 +19,7 @@ export interface Judge {
   id: string
   givenName: string
   familyName: string
+  country?: string // Ülke/organizasyon kodu (ör. TUR)
   externalId?: string
   userId?: string
   createdAt: Date

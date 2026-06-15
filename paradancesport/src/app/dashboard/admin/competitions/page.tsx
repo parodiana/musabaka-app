@@ -8,7 +8,7 @@ import { mapCompetition, deleteCompetition } from '@/lib/firebase/competitions'
 import { useAuthStore } from '@/store/auth.store'
 import { CompetitionForm } from '@/components/admin/CompetitionForm'
 import type { Competition } from '@/types'
-import { Trophy, Plus, Pencil, Trash2, X, ShieldAlert, MapPin, Calendar, Layers, FileSpreadsheet } from 'lucide-react'
+import { Trophy, Plus, Pencil, Trash2, X, ShieldAlert, MapPin, Calendar, Layers, FileSpreadsheet, AlertTriangle } from 'lucide-react'
 
 const statusLabels: Record<string, string> = {
   DRAFT: 'Taslak',
@@ -36,6 +36,7 @@ export default function AdminCompetitionsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Competition | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<Competition | null>(null)
 
   useEffect(() => {
     const q = query(collection(db, 'competitions'), orderBy('date', 'desc'))
@@ -80,10 +81,12 @@ export default function AdminCompetitionsPage() {
     setEditing(null)
   }
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id)
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeletingId(confirmDelete.id)
     try {
-      await deleteCompetition(id)
+      await deleteCompetition(confirmDelete.id)
+      setConfirmDelete(null)
     } catch (err) {
       console.error('Delete error:', err)
       alert('Silme işlemi başarısız oldu.')
@@ -187,7 +190,7 @@ export default function AdminCompetitionsPage() {
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(c.id)}
+                  onClick={() => setConfirmDelete(c)}
                   disabled={deletingId === c.id}
                   className="text-gray-500 hover:text-red-600 p-1.5 rounded transition-colors disabled:opacity-50"
                   title="Sil"
@@ -221,6 +224,45 @@ export default function AdminCompetitionsPage() {
                 onSuccess={closeForm}
                 onCancel={closeForm}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Yarışma silme onayı */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-200">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <h2 className="text-lg font-semibold text-gray-900">Yarışmayı Sil</h2>
+            </div>
+            <div className="px-5 py-4 space-y-3 text-sm text-gray-600">
+              <p>
+                <strong>{confirmDelete.name}</strong> yarışmasını silmek üzeresiniz. Bu işlem geri
+                alınamaz.
+              </p>
+              <p className="rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-xs">
+                Yarışmaya ait <strong>kategoriler, kayıtlar (sırt no), puanlar ve sonuçlar</strong>{' '}
+                sistemde kalsa da yarışma listeden kaldırılır ve erişilemez hale gelir. Devam etmek
+                istediğinizden emin misiniz?
+              </p>
+            </div>
+            <div className="flex gap-3 px-5 py-4 border-t border-gray-200">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deletingId === confirmDelete.id}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deletingId === confirmDelete.id}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingId === confirmDelete.id ? 'Siliniyor…' : 'Evet, Sil'}
+              </button>
             </div>
           </div>
         </div>

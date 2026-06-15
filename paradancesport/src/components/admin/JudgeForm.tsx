@@ -17,6 +17,7 @@ export function JudgeForm({ judge, linkableUsers = [], onSuccess, onCancel }: Ju
 
   const [givenName, setGivenName] = useState(judge?.givenName ?? '')
   const [familyName, setFamilyName] = useState(judge?.familyName ?? '')
+  const [country, setCountry] = useState(judge?.country ?? '')
   const [externalId, setExternalId] = useState(judge?.externalId ?? '')
   const [userId, setUserId] = useState(judge?.userId ?? '')
 
@@ -32,6 +33,7 @@ export function JudgeForm({ judge, linkableUsers = [], onSuccess, onCancel }: Ju
       const input: JudgeInput = {
         givenName: givenName.trim(),
         familyName: familyName.trim(),
+        country: country.trim().toUpperCase() || undefined,
         externalId: externalId.trim() || undefined,
         userId: userId || undefined,
       }
@@ -87,6 +89,23 @@ export function JudgeForm({ judge, linkableUsers = [], onSuccess, onCancel }: Ju
             disabled={loading}
           />
         </div>
+      </div>
+
+      {/* Ülke */}
+      <div className="space-y-2">
+        <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+          Ülke
+        </label>
+        <input
+          id="country"
+          type="text"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="input uppercase"
+          placeholder="Örn: TUR"
+          maxLength={3}
+          disabled={loading}
+        />
       </div>
 
       {/* Dış kimlik */}

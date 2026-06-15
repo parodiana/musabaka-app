@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
-import { mapCompetition } from '@/lib/firebase/competitions'
 import { mapEvent } from '@/lib/firebase/events'
 import { mapJudge } from '@/lib/firebase/judges'
 import { mapJudgeAssignment } from '@/lib/firebase/judgeAssignments'
@@ -13,7 +12,6 @@ import { validateScore, scaleFor } from '@/lib/scoring/validators'
 import { useAuthStore } from '@/store/auth.store'
 import { useI18n } from '@/i18n/useI18n'
 import type {
-  Competition,
   Event,
   Judge,
   JudgeAssignment,
@@ -21,14 +19,13 @@ import type {
   Score,
   ScoringComponent,
 } from '@/types'
-import { ShieldAlert, ClipboardList, CheckCircle2, X, Trophy, Hourglass } from 'lucide-react'
+import { ShieldAlert, ClipboardList, CheckCircle2, X, Trophy, Hourglass, Lock } from 'lucide-react'
 
 export default function HakemScoringPage() {
   const { user } = useAuthStore()
   const { t } = useI18n()
 
   const [judges, setJudges] = useState<Judge[]>([])
-  const [competitions, setCompetitions] = useState<Competition[]>([])
   const [myAssignments, setMyAssignments] = useState<JudgeAssignment[]>([])
   const [allEvents, setAllEvents] = useState<Event[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
@@ -44,13 +41,6 @@ export default function HakemScoringPage() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'judges'), (s) =>
       setJudges(s.docs.map((d) => mapJudge(d.id, d.data())))
-    )
-    return () => unsub()
-  }, [])
-
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'competitions'), (s) =>
-      setCompetitions(s.docs.map((d) => mapCompetition(d.id, d.data())))
     )
     return () => unsub()
   }, [])
@@ -77,7 +67,6 @@ export default function HakemScoringPage() {
   }, [myJudgeId])
 
   const eventById = useMemo(() => new Map(allEvents.map((e) => [e.id, e])), [allEvents])
-  const compById = useMemo(() => new Map(competitions.map((c) => [c.id, c])), [competitions])
 
   // Sahada (aktif) sporcusu olan, bana atanmış kategoriyi bul
   const activeAssignment = useMemo(() => {
@@ -88,7 +77,6 @@ export default function HakemScoringPage() {
   }, [myAssignments, eventById])
 
   const activeEvent = activeAssignment ? eventById.get(activeAssignment.eventId) : undefined
-  const activeComp = activeEvent ? compById.get(activeEvent.competitionId) : undefined
 
   // Aktif kategorinin kayıt + skorları
   useEffect(() => {
@@ -152,11 +140,6 @@ export default function HakemScoringPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('hakem.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('hakem.subtitle')}</p>
-      </div>
-
       {!activeAssignment || !activeEvent || !activeEntry ? (
         <div className="rounded-xl bg-blue-50 border border-blue-200 p-10 text-center">
           <Hourglass className="w-12 h-12 text-blue-400 mx-auto mb-4" />
@@ -168,19 +151,10 @@ export default function HakemScoringPage() {
         </div>
       ) : (
         <>
-          {/* Bilgi başlığı — yarışma + kategori (yalnızca bilgi) */}
-          <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-5 flex flex-wrap items-center gap-3">
+          {/* Yalnızca kategori adı */}
+          <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-5 flex items-center gap-3">
             <Trophy className="w-6 h-6 text-blue-600" />
-            <div>
-              <p className="font-semibold text-gray-900">
-                {activeEvent.eventCode} · {activeEvent.eventName}
-              </p>
-              <p className="text-xs text-gray-500">
-                {activeComp?.name}
-                {activeAssignment &&
-                  ` · Panel ${activeAssignment.judgeLabel} · ${activeAssignment.components.join(', ')}`}
-              </p>
-            </div>
+            <p className="text-lg font-semibold text-gray-900">{activeEvent.eventName}</p>
           </div>
 
           {/* Sahadaki sporcu — puanlama */}
@@ -193,9 +167,6 @@ export default function HakemScoringPage() {
                 <div className="px-5 py-3 border-b border-gray-200 flex items-center gap-2">
                   <ClipboardList className="w-4 h-4 text-blue-600" />
                   <span className="font-semibold text-gray-900">{dance ?? t('common.scoring')}</span>
-                  <span className="text-xs text-gray-500">
-                    · {t('common.panel')} {activeAssignment.judgeLabel} · {activeAssignment.components.join(', ')}
-                  </span>
                 </div>
                 <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[480px]">
@@ -317,8 +288,11 @@ function ScoreRow({
     }
   }
 
+  // Tüm bileşenler gönderildiyse satır kilitlenir — hakem gönderdikten sonra değiştiremez
+  const locked = components.length > 0 && components.every((c) => savedValues(c) != null)
+
   return (
-    <tr className={`border-b border-gray-100 ${saved ? 'bg-green-50' : ''}`}>
+    <tr className={`border-b border-gray-100 ${saved ? 'bg-green-50' : locked ? 'bg-gray-50' : ''}`}>
       <td className="px-5 py-2">
         <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-900 text-white font-bold">
           {bibNumber}
@@ -326,28 +300,42 @@ function ScoreRow({
       </td>
       {components.map((c) => {
         const scale = scaleFor(c)
+        const v = savedValues(c)
         return (
           <td key={c} className="px-5 py-2">
-            <input
-              type="number"
-              inputMode="decimal"
-              step={scale.step}
-              min={scale.min}
-              max={scale.max}
-              value={texts[c] ?? ''}
-              onChange={(e) => setText(c, e.target.value)}
-              className={`w-24 rounded-lg border px-3 py-1.5 text-center focus:outline-none focus:ring-2 ${
-                errors[c]
-                  ? 'border-red-400 ring-red-200'
-                  : 'border-gray-300 focus:ring-blue-200'
-              }`}
-              placeholder={`${scale.min.toFixed(scale.decimals)}–${scale.max.toFixed(scale.decimals)}`}
-            />
+            {locked ? (
+              <span className="inline-block w-24 text-center font-semibold text-gray-800 tabular-nums">
+                {v != null ? v.toFixed(scale.decimals) : '—'}
+              </span>
+            ) : (
+              <input
+                type="number"
+                inputMode="decimal"
+                step={scale.step}
+                min={scale.min}
+                max={scale.max}
+                value={texts[c] ?? ''}
+                onChange={(e) => setText(c, e.target.value)}
+                className={`w-24 rounded-lg border px-3 py-1.5 text-center focus:outline-none focus:ring-2 ${
+                  errors[c]
+                    ? 'border-red-400 ring-red-200'
+                    : 'border-gray-300 focus:ring-blue-200'
+                }`}
+                placeholder={`${scale.min.toFixed(scale.decimals)}–${scale.max.toFixed(scale.decimals)}`}
+              />
+            )}
           </td>
         )
       })}
       <td className="px-5 py-2 text-right">
-        {saved ? (
+        {locked ? (
+          <span
+            className="inline-flex items-center gap-1 text-sm text-gray-500"
+            title={t('hakem.lockedHint')}
+          >
+            <Lock className="w-4 h-4" /> {t('hakem.locked')}
+          </span>
+        ) : saved ? (
           <span className="inline-flex items-center gap-1 text-sm text-green-600">
             <CheckCircle2 className="w-4 h-4" /> {t('common.saved')}
           </span>
@@ -361,7 +349,7 @@ function ScoreRow({
         )}
       </td>
 
-      {confirming && (
+      {confirming && !locked && (
         <td className="p-0">
           <ConfirmDialog
             bibNumber={bibNumber}

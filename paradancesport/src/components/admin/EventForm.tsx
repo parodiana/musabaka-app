@@ -53,11 +53,7 @@ export function EventForm({
     e.preventDefault()
     setError(null)
 
-    if (dances.length === 0) {
-      setError('En az bir dans seçmelisiniz')
-      return
-    }
-
+    // Dans seçimi opsiyonel: boş bırakılırsa kategori tek (danssız) program olarak puanlanır
     setLoading(true)
     try {
       const input: EventInput = {
@@ -113,7 +109,7 @@ export function EventForm({
         {/* Kod */}
         <div className="space-y-2">
           <label htmlFor="eventCode" className="block text-sm font-medium text-gray-700">
-            Kategori Kodu
+            Kategori Kodu <span className="text-gray-400 font-normal">(opsiyonel)</span>
           </label>
           <input
             id="eventCode"
@@ -122,7 +118,6 @@ export function EventForm({
             onChange={(e) => setEventCode(e.target.value)}
             className="input uppercase"
             placeholder="MSF-C1"
-            required
             disabled={loading}
           />
         </div>
@@ -242,7 +237,13 @@ export function EventForm({
 
       {/* Danslar */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">Danslar</label>
+        <label className="block text-sm font-medium text-gray-700">
+          Danslar <span className="text-gray-400 font-normal">(opsiyonel)</span>
+        </label>
+        <p className="text-xs text-gray-400">
+          Freestyle kategorilerde dans seçmek zorunda değilsiniz; boş bırakılırsa tek program
+          olarak puanlanır.
+        </p>
         <div className="flex flex-wrap gap-2">
           {availableDances.map((dance) => {
             const selected = dances.includes(dance)

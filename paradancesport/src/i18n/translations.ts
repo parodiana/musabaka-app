@@ -52,7 +52,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'hakem.noAssignmentHint': '(Henüz size atanmış bir kategori yok.)',
     'hakem.confirmTitle': 'Puanı Onayla',
     'hakem.confirmNote':
-      'Onayladığınızda puanlar kaydedilir. Gerekirse daha sonra tekrar düzenleyebilirsiniz.',
+      'Onayladığınızda puanlar kaydedilir ve gönderilir. Gönderdikten sonra değiştiremezsiniz.',
+    'hakem.locked': 'Gönderildi',
+    'hakem.lockedHint': 'Puanlar gönderildi; değişiklik için masa hakemine başvurun.',
 
     // Başhakem paneli
     'bp.title': 'Başhakem Paneli',
@@ -159,6 +161,8 @@ export const translations: Record<Locale, Record<string, string>> = {
       'Başhakem sonuçları iade ederse kategori yeniden düzenlemeye açılır ve gerekli düzeltmelerden sonra tekrar gönderebilirsiniz.',
     'masa.step': 'adım',
     'masa.invalidStep': 'Geçersiz adım/aralık',
+    'masa.deleteJudgeScores': 'Bu Hakemin Puanını Sil',
+    'masa.deleted': 'Silindi',
 
     // Roller
     'role.admin': 'Yönetici',
@@ -299,7 +303,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'hakem.noAssignmentHint': '(No category has been assigned to you yet.)',
     'hakem.confirmTitle': 'Confirm Score',
     'hakem.confirmNote':
-      'Once confirmed, the scores are saved. You can edit them again later if needed.',
+      'Once confirmed, the scores are saved and submitted. You cannot change them after submitting.',
+    'hakem.locked': 'Submitted',
+    'hakem.lockedHint': 'Scores submitted; contact the table official for any change.',
 
     // Chairperson panel
     'bp.title': 'Chairperson Panel',
@@ -406,6 +412,8 @@ export const translations: Record<Locale, Record<string, string>> = {
       'If the Chairperson returns the results, the category reopens for editing and you can resend after the necessary corrections.',
     'masa.step': 'step',
     'masa.invalidStep': 'Invalid step/range',
+    'masa.deleteJudgeScores': 'Delete This Adjudicator’s Scores',
+    'masa.deleted': 'Deleted',
 
     // Roles
     'role.admin': 'Administrator',

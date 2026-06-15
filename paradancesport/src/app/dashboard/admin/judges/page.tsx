@@ -114,6 +114,7 @@ export default function AdminJudgesPage() {
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="px-6 py-3 font-medium">Ad Soyad</th>
+                <th className="px-6 py-3 font-medium">Ülke</th>
                 <th className="px-6 py-3 font-medium">Dış Kimlik</th>
                 <th className="px-6 py-3 font-medium">Bağlı Kullanıcı</th>
                 <th className="px-6 py-3 font-medium text-right">İşlem</th>
@@ -126,6 +127,9 @@ export default function AdminJudgesPage() {
                   <tr key={j.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-6 py-3 font-medium text-gray-900">
                       {j.givenName} {j.familyName}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600">
+                      {j.country || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-6 py-3 text-gray-600">
                       {j.externalId || <span className="text-gray-300">—</span>}
