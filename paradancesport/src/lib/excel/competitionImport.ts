@@ -41,7 +41,7 @@ export function extractCompetitionMeta(metaRows: string[][]): CompetitionMeta {
 export type ImportField = AthleteField | 'eventCode' | 'eventName' | 'eligibleClasses' | 'entryClass'
 
 export const EVENT_ENTRY_FIELDS: FieldDef[] = [
-  { key: 'eventCode' as AthleteField, label: 'Kategori Kodu', required: true, hints: ['event code', 'eventcode', 'kategori kodu'] },
+  { key: 'eventCode' as AthleteField, label: 'Kategori Kodu', required: false, hints: ['event code', 'eventcode', 'kategori kodu'] },
   { key: 'eventName' as AthleteField, label: 'Kategori Adı', required: true, hints: ['event name', 'eventname', 'kategori adı', 'kategori'] },
   { key: 'eligibleClasses' as AthleteField, label: 'Uygun Sınıflar', required: false, hints: ['eligible classes', 'eligible', 'uygun sınıf'] },
   { key: 'entryClass' as AthleteField, label: 'Kayıt Sınıfı', required: false, hints: ['entry class', 'entryclass', 'kayıt sınıfı'] },
@@ -167,16 +167,17 @@ export function buildImportPlan(
     }
     const input = mapped.input
 
-    // Event kısmı
+    // Event kısmı — Kategori Adı zorunlu; Kategori Kodu opsiyonel (yoksa ad anahtar olur)
     const eventCode = getCol(row, 'eventCode')
     const eventName = getCol(row, 'eventName')
-    if (!eventCode || !eventName) {
-      errors.push({ rowIndex: idx, errors: ['Kategori kodu/adı boş'] })
+    if (!eventName) {
+      errors.push({ rowIndex: idx, errors: ['Kategori adı boş'] })
       return
     }
-    if (!eventsByCode.has(eventCode)) {
+    const eventKey = eventCode || eventName
+    if (!eventsByCode.has(eventKey)) {
       eventsByCode.set(
-        eventCode,
+        eventKey,
         deriveEvent('', eventCode, eventName, getCol(row, 'eligibleClasses'))
       )
     }
@@ -196,11 +197,11 @@ export function buildImportPlan(
     if (!categoriesByKey.has(key)) categoriesByKey.set(key, new Set())
     categoriesByKey.get(key)!.add(eventName)
 
-    // Entry
+    // Entry (eventKey = kod varsa kod, yoksa ad)
     entries.push({
       rowIndex: idx,
       athleteKey: key,
-      eventCode,
+      eventCode: eventKey,
       entryClass: getCol(row, 'entryClass') || input.classifications[0] || '',
     })
   })
@@ -254,7 +255,8 @@ export async function runCompetitionImport(
     const { eligibleClasses: _eligible, ...eventInput } = ev
     void _eligible
     const id = await createEvent({ ...eventInput, competitionId })
-    eventIdByCode.set(ev.eventCode, id)
+    // PlanEntry.eventCode ile aynı anahtar: kod varsa kod, yoksa ad
+    eventIdByCode.set(ev.eventCode || ev.eventName, id)
   }
 
   // 3) Sporcular (yeni olanlar oluşturulur, mevcutlar yeniden kullanılır)

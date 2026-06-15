@@ -8,7 +8,7 @@ import { mapEvent, updateEvent, setActiveEntry } from '@/lib/firebase/events'
 import { mapJudge } from '@/lib/firebase/judges'
 import { mapJudgeAssignment } from '@/lib/firebase/judgeAssignments'
 import { mapEntry } from '@/lib/firebase/entries'
-import { mapScore, upsertScore } from '@/lib/firebase/scores'
+import { mapScore, upsertScore, deleteScore } from '@/lib/firebase/scores'
 import { validateScore, scaleFor } from '@/lib/scoring/validators'
 import { aggregate } from '@/lib/scoring/trimmed-mean'
 import { useAuthStore } from '@/store/auth.store'
@@ -22,7 +22,7 @@ import type {
   Score,
   ScoringComponent,
 } from '@/types'
-import { ShieldAlert, ClipboardList, Lock, CheckCircle2, Send, ChevronRight } from 'lucide-react'
+import { ShieldAlert, ClipboardList, Lock, CheckCircle2, Send, ChevronRight, Trash2 } from 'lucide-react'
 
 const COMPONENTS: ScoringComponent[] = ['TS', 'MCP', 'DL']
 const danceKey = (d?: string) => (d && d.trim() ? d.trim() : '')
@@ -219,6 +219,14 @@ export default function MasaHakemiScoringPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  // Bir hakemin bu sporcu için TÜM puanlarını gerçek kayıtlardan sil (dans anahtarı yeniden kurmaz)
+  const deleteJudgeScoresForEntry = async (entryId: string, judgeId: string) => {
+    const toDel = scores.filter((s) => s.entryId === entryId && s.judgeId === judgeId)
+    await Promise.all(
+      toDel.map((s) => deleteScore(s.eventId, s.entryId, s.judgeId, s.component, s.dance))
+    )
   }
 
   if (user && user.role !== 'masa_hakemi' && user.role !== 'admin') {
@@ -460,6 +468,12 @@ export default function MasaHakemiScoringPage() {
                           )
                         }
                         enteredBy={user?.uid ?? 'masa'}
+                        hasScores={scores.some(
+                          (s) => s.entryId === selectedEntry.id && s.judgeId === selectedJudgeId
+                        )}
+                        onDeleteAll={() =>
+                          deleteJudgeScoresForEntry(selectedEntry.id, selectedJudgeId)
+                        }
                       />
                     )}
                   </div>
@@ -651,6 +665,8 @@ function JudgeEntryForm({
   eventId,
   getValue,
   enteredBy,
+  hasScores,
+  onDeleteAll,
 }: {
   entry: Entry
   assignment: JudgeAssignment
@@ -659,6 +675,8 @@ function JudgeEntryForm({
   eventId: string
   getValue: (dance: string | undefined, c: ScoringComponent) => number | undefined
   enteredBy: string
+  hasScores: boolean
+  onDeleteAll: () => Promise<void>
 }) {
   const keyOf = (dance: string | undefined, c: ScoringComponent) => `${danceKey(dance)}|${c}`
   const initial = () => {
@@ -672,18 +690,29 @@ function JudgeEntryForm({
     return t
   }
 
+  const { t } = useI18n()
   const [texts, setTexts] = useState<Record<string, string>>(initial)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+
+  // Bu hakemin bu sırt no için kayıtlı puanı var mı? (gerçek kayıtlara göre)
+  const hasAnySaved = hasScores
 
   const handleSave = async () => {
     const errs: Record<string, boolean> = {}
     const toSave: { dance: string | undefined; c: ScoringComponent; val: number }[] = []
+    // Boş bırakılıp eskiden değeri olan bileşenler silinir (puanı tamamen kaldırma)
+    const toDelete: { dance: string | undefined; c: ScoringComponent }[] = []
     for (const dance of dances) {
       for (const c of assignment.components) {
         const raw = (texts[keyOf(dance, c)] ?? '').trim()
-        if (raw === '') continue
+        if (raw === '') {
+          if (getValue(dance, c) != null) toDelete.push({ dance, c })
+          continue
+        }
         const num = Number(raw)
         if (!validateScore(num, c).valid) {
           errs[keyOf(dance, c)] = true
@@ -693,12 +722,12 @@ function JudgeEntryForm({
       }
     }
     setErrors(errs)
-    if (Object.keys(errs).length > 0 || toSave.length === 0) return
+    if (Object.keys(errs).length > 0 || (toSave.length === 0 && toDelete.length === 0)) return
 
     setSaving(true)
     try {
-      await Promise.all(
-        toSave.map((s) =>
+      await Promise.all([
+        ...toSave.map((s) =>
           upsertScore({
             competitionId,
             eventId,
@@ -711,12 +740,29 @@ function JudgeEntryForm({
             mode: 'TABLE',
             enteredBy,
           })
-        )
-      )
+        ),
+        ...toDelete.map((s) => deleteScore(eventId, entry.id, assignment.judgeId, s.c, s.dance)),
+      ])
       setSaved(true)
       setTimeout(() => setSaved(false), 1500)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Bu hakemin bu sırt no için TÜM puanlarını sil (gerçek kayıtlardan)
+  const handleDeleteAll = async () => {
+    setDeleting(true)
+    try {
+      await onDeleteAll()
+      // Inputları temizle
+      const cleared: Record<string, string> = {}
+      for (const dance of dances) for (const c of assignment.components) cleared[keyOf(dance, c)] = ''
+      setTexts(cleared)
+      setDeleted(true)
+      setTimeout(() => setDeleted(false), 1500)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -759,17 +805,32 @@ function JudgeEntryForm({
           </div>
         </div>
       ))}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || deleting}
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {saving ? 'Kaydediliyor…' : 'Kaydet'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
+        {hasAnySaved && (
+          <button
+            onClick={handleDeleteAll}
+            disabled={saving || deleting}
+            className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {deleting ? '…' : t('masa.deleteJudgeScores')}
+          </button>
+        )}
         {saved && (
           <span className="inline-flex items-center gap-1 text-sm text-green-600">
-            <CheckCircle2 className="w-4 h-4" /> Kaydedildi
+            <CheckCircle2 className="w-4 h-4" /> {t('common.saved')}
+          </span>
+        )}
+        {deleted && (
+          <span className="inline-flex items-center gap-1 text-sm text-red-600">
+            <Trash2 className="w-4 h-4" /> {t('masa.deleted')}
           </span>
         )}
       </div>

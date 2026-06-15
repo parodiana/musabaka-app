@@ -1,13 +1,19 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useAuthStore } from '@/store/auth.store'
 import { useI18n } from '@/i18n/useI18n'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { Menu } from 'lucide-react'
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { user } = useAuthStore()
+  const { user, language, setLanguage } = useAuthStore()
   const { t } = useI18n()
+
+  // Admin yalnızca Türkçe çalışır; dil değiştirme yok
+  useEffect(() => {
+    if (user?.role === 'admin' && language !== 'tr') setLanguage('tr')
+  }, [user?.role, language, setLanguage])
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
@@ -26,7 +32,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
         {/* Right: Language switcher + user info */}
         <div className="flex items-center gap-2 sm:gap-6">
-          <LanguageSwitcher />
+          {user?.role !== 'admin' && <LanguageSwitcher />}
 
           {user && (
             <div className="flex items-center gap-2">

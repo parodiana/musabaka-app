@@ -15,6 +15,7 @@ const COLLECTION = 'judges'
 export interface JudgeInput {
   givenName: string
   familyName: string
+  country?: string
   externalId?: string
   userId?: string
 }
@@ -26,6 +27,7 @@ export async function createJudge(input: JudgeInput): Promise<string> {
   const ref = await addDoc(collection(db, COLLECTION), {
     givenName: input.givenName,
     familyName: input.familyName,
+    country: input.country ?? null,
     externalId: input.externalId ?? null,
     userId: input.userId ?? null,
     createdAt: serverTimestamp(),
@@ -40,6 +42,7 @@ export async function updateJudge(id: string, input: JudgeInput): Promise<void> 
   await updateDoc(doc(db, COLLECTION, id), {
     givenName: input.givenName,
     familyName: input.familyName,
+    country: input.country ?? null,
     externalId: input.externalId ?? null,
     userId: input.userId ?? null,
   })
@@ -60,6 +63,7 @@ export function mapJudge(id: string, data: Record<string, unknown>): Judge {
     id,
     givenName: (data.givenName as string) ?? '',
     familyName: (data.familyName as string) ?? '',
+    country: (data.country as string) ?? undefined,
     externalId: (data.externalId as string) ?? undefined,
     userId: (data.userId as string) ?? undefined,
     createdAt:
